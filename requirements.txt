@@ -1,3 +1,6 @@
 sqlalchemy
 pyodbc
 pydantic
+langchain
+langchain_google_genai
+dotenv

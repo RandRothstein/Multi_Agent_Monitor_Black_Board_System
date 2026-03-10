@@ -22,7 +22,7 @@ class SupervisorAgent:
             result = agent.run()
 
             if result:
-                print(f"end: {result}")
+                #print(f"end: {result}")
                 BlackboardService.write_evidence(result)
                 findings.append(result)
 
