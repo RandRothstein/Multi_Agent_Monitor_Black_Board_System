@@ -67,6 +67,13 @@ class TrafficAgent(BaseAgent):
 
         structured = response["structured_response"]
 
-        print(response['messages'].usage_metadata)
+        ai_message = response['messages'][1]  
+
+        # Access the usage_metadata dictionary
+        tokens = ai_message.usage_metadata
+
+        print(f"Input Tokens: {tokens['input_tokens']}")
+        print(f"Output Tokens: {tokens['output_tokens']}")
+        print(f"Total: {tokens['total_tokens']}")
 
         return structured.model_dump()
