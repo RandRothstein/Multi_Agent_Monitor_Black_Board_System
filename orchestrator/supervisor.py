@@ -21,26 +21,25 @@ class SupervisorState(AgentState):
     sub_agent_name : str
     findings_summary : str
 
-model = ChatGoogleGenerativeAI(
-    model = "gemini-2.5-flash",
-    google_api_key = os.getenv('GOOGLE_API_KEY'),
-    temperature = 0
-)
-
-agent = create_agent(
-    model = model,
-    tools = [],
-    state_schema = SupervisorState,
-    checkpointer = InMemorySaver()
-)
-
 class SupervisorAgent:
 
     def __init__(self):
         self.db = SessionLocal()
         st.set_page_config(page_title='Solomon Council',layout='wide')
-        st.title("Multi Agent System")
+        st.title("🛡️ Solomon Council: Multi-Agent System")
 
+        self.model = ChatGoogleGenerativeAI(
+            model = "gemini-2.5-flash",
+            google_api_key = os.getenv('GOOGLE_API_KEY'),
+            temperature = 0
+        )
+
+    def parse_sku_from_ai(self, ai_response):
+
+        content = ai_response.content if hasattr(ai_response,'content') else str(ai_response)
+
+        return content.strip()
+    
     def run_cases(self, case):
         agents = []
         findings = []
@@ -60,43 +59,53 @@ class SupervisorAgent:
 
         return findings
     
-    def user_cases(self):
-         user_query = st.text_area("Ask your question about any product",height = 100)
-         if st.button('Analyze') and user_query:
-            response = agent.invoke({'messages':[{'role':"user","content": f"Extract the SKU ID from this query: {user_query}"}]})
+    def user_interface(self):
+        user_query = st.text_area("Ask your question about any product (e.g., 'Check status for SKU_123')",height = 100)
+        if st.button('Analyze') and user_query:
+            messages = [
+                {"role": "user", "content": f"Extract the SKU ID from this query: {user_query}. Return ONLY the ID (e.g. SKU-002). If no ID is found, return 'None'."}
+            ]
+            response = self.model.invoke(messages)
             extracted_sku = self.parse_sku_from_ai(response)
 
-            if extracted_sku :
+            if extracted_sku and extracted_sku != None:
                 detector = TrafficDetector()
                 cases = [c for c in detector.detect() if c['sku_id'] == extracted_sku]
-            else:
-                st.write(f"Please provide SKU_ID to perform analysis")
             
-            if cases:
-                all_findings = []
-                Base.metadata.create_all(bind=engine)
-                for case in cases:
-                    findings = self.run_cases(case)
-                    all_findings.extend(findings)
+                if cases:
+                    all_findings = []
+                    Base.metadata.create_all(bind=engine)
+                    for case in cases:
+                        findings = self.run_cases(case)
+                        all_findings.extend(findings)
 
-            self.display_results(all_findings)
+                    self.display_results(all_findings)
+
+                else:
+                    st.warning(f"No traffic anomalies found in the database for SKU: {extracted_sku}")
+            else:
+                st.error("Please Provide a valid SKU ID in you query.")
 
     def display_results(self, findings):
-        st.subheader("Analysis Results")
+        if not findings:
+            st.info("No anomalies were analyzed for this SKU.")
+            return
+
+        st.subheader("🛡️ Solomon Analysis Results")
         for finding in findings:
-            with st.expander(f"Anomaly Detected: {finding['metric_name']}", expanded=True):
+            # 'metric_name' comes from your StructuredOutput model
+            with st.expander(f"Analysis: {finding.get('metric_name', 'Traffic Report')}", expanded=True):
                 col1, col2 = st.columns([1, 3])
                 
                 with col1:
-                    # Visualizing the severity
-                    score = finding['severity_score']
+                    score = finding.get('severity_score', '0')
                     st.metric("Severity Score", f"{score}/1.0")
                     
                 with col2:
-                    st.write(f"**Issue:** {finding['finding_summary']}")
-                    st.markdown("### 💡 Recommended Action")
-                    # Ensure your prompt in TrafficAgent encourages a 'Recommendation' section
-                    st.success(finding.get('recommendation', "Contact the supply chain team immediately."))
-    
+                    st.write(f"**Agent:** {finding.get('agent_name')}")
+                    st.write(f"**Metric Value:** {finding.get('metric_value')}")
+                    st.markdown("### 📝 Findings & Recommendations")
+                    # Since your model puts everything in finding_summary:
+                    st.info(finding.get('finding_summary', "No detailed summary provided."))
     def close(self):
         self.db.close()

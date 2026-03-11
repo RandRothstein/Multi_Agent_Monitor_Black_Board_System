@@ -6,9 +6,8 @@ from agents.base_agent import BaseAgent
 from model.structured_output_model import StructuredOutput
 
 from langchain.agents import create_agent
-from langchain.agents.structured_output import ToolStrategy
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+from langchain_community.callbacks.manager import get_openai_callback
 load_dotenv()
 
 class TrafficAgent(BaseAgent):
@@ -57,17 +56,12 @@ class TrafficAgent(BaseAgent):
 
         Return structured output.
         """
-        
-        response = self.llm.invoke(prompt)
-        structured = response["structured_response"]
+        with get_openai_callback() as cb:
 
-        ai_message = response['messages'][1]  
+            response = self.llm.invoke(prompt)
+            print(f"---Traffic agent Token Usage")
+            print(f"Total Tokens: {cb.total_tokens} | Cost: ${cb.total_cost}")
+            print(f"-------------------")
 
-        # Access the usage_metadata dictionary
-        tokens = ai_message.usage_metadata
-
-        print(f"Input Tokens: {tokens['input_tokens']}")
-        print(f"Output Tokens: {tokens['output_tokens']}")
-        print(f"Total: {tokens['total_tokens']}")
-
-        return structured.model_dump()
+        # Return the dictionary version of the Pydantic model
+        return response.model_dump()
