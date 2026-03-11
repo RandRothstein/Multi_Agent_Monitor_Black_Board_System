@@ -11,22 +11,17 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 
-model = ChatGoogleGenerativeAI(
-    model = "gemini-2.5-flash",
-    google_api_key=os.getenv('GOOGLE_API_KEY'),
-    temperature=0
-    )
-
-agent = create_agent(
-    model = model,
-    tools =[],
-    response_format=ToolStrategy(
-        schema=StructuredOutput,
-        tool_message_content="Return structured anomaly analysis"
-    )
-)
-
 class TrafficAgent(BaseAgent):
+
+    def __init__(self,db,sku_id):
+        super().__init__(db,sku_id)
+
+        self.llm = ChatGoogleGenerativeAI(
+            model = "gemini-2.5-flash",
+            google_api_key = os.getenv('GOOGLE_API_KEY'),
+            temperature = 0
+        ).with_structured_output(StructuredOutput)
+
     def run(self):
 
         query = text("""
@@ -62,9 +57,8 @@ class TrafficAgent(BaseAgent):
 
         Return structured output.
         """
-
-        response = agent.invoke({'messages':[{"role":"user","content":prompt}]})
-
+        
+        response = self.llm.invoke(prompt)
         structured = response["structured_response"]
 
         ai_message = response['messages'][1]  
