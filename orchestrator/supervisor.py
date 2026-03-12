@@ -1,20 +1,18 @@
-from config.db import SessionLocal
+from config.db import SessionLocal,engine
+from sqlalchemy import text
 #from agents.conversion.price_agent import PriceAgent
 from agents.traffic.traffic_agent import TrafficAgent
 from services.blackboard_service import BlackboardService
 
 from langchain.agents import create_agent,AgentState
-from langgraph.checkpoint.memory import InMemorySaver
 from langchain_google_genai import ChatGoogleGenerativeAI
-from detectors.traffic_detector import TrafficDetector
 from model.evidince_model import Base
-from config.db import engine
 import streamlit as st
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
-
+st.set_page_config(page_title='Solomon Council',layout='wide')
 
 class SupervisorState(AgentState):
     sku_id : str
@@ -27,7 +25,6 @@ class SupervisorAgent:
     def __init__(self):
         self.db = SessionLocal()
         st.title("🛡️ Solomon Council: Multi-Agent System")
-        st.set_page_config(page_title='Solomon Council',layout='wide')
 
         self.model = ChatGoogleGenerativeAI(
             model = "gemini-2.5-flash",
@@ -44,7 +41,6 @@ class SupervisorAgent:
     def run_cases(self, case):
         agents = []
         findings = []
-        self.sku_id = case['sku_id']
         if case['anomaly_type'] =='traffic_drop':
 
             agents = [#PriceAgent(case)
@@ -70,18 +66,16 @@ class SupervisorAgent:
             extracted_sku = self.parse_sku_from_ai(response)
 
             if extracted_sku and extracted_sku != None:
-                detector = TrafficDetector()
-                cases = [c for c in detector.detect() if c['sku_id'] == extracted_sku]
-            
+
+                query = text("""
+                        SELECT agent_name, severity_score, finding_summary, created_at
+                    FROM dbo.evidence 
+                    WHERE product_id = :sku_id
+                    ORDER BY created_at DESC                         
+                        """)
+                cases = self.db.execute(query,{'sku_id':extracted_sku}).mappings().fetchall()
                 if cases:
-                    all_findings = []
-                    Base.metadata.create_all(bind=engine)
-                    for case in cases:
-                        findings = self.run_cases(case)
-                        all_findings.extend(findings)
-
-                    self.display_results(all_findings)
-
+                    self.display_results(cases)
                 else:
                     st.warning(f"No traffic anomalies found in the database for SKU: {extracted_sku}")
             else:
@@ -94,19 +88,10 @@ class SupervisorAgent:
 
         st.subheader("🛡️ Solomon Analysis Results")
         for finding in findings:
-            # 'metric_name' comes from your StructuredOutput model
-            with st.expander(f"Analysis: {finding.get('metric_name', 'Traffic Report')}", expanded=True):
-                col1, col2 = st.columns([1, 3])
-                
-                with col1:
-                    score = finding.get('severity_score', '0')
-                    st.metric("Severity Score", f"{score}/1.0")
-                    
-                with col2:
-                    st.write(f"**Agent:** {finding.get('agent_name')}")
-                    st.write(f"**Metric Value:** {finding.get('metric_value')}")
-                    st.markdown("### 📝 Findings & Recommendations")
-                    # Since your model puts everything in finding_summary:
-                    st.info(finding.get('finding_summary', "No detailed summary provided."))
+            st.write(f"**Agent:** {finding.get('agent_name')}")
+            st.write(f"**Severity:** {finding.get('severity_score')}")
+            st.markdown("### 📝 Findings & Recommendations")
+            st.info(finding.get('finding_summary', "No detailed summary provided."))
+    
     def close(self):
         self.db.close()
