@@ -18,3 +18,14 @@ class Evidence(Base):
     severity_score = Column(Float)
     finding_summary = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Case(Base):
+    __tablename__ = "case"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sku_id = Column(String(50), index=True)
+    retailer = Column(String(50))
+    anomaly_type = Column(String(50))
+    severity = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)

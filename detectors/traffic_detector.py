@@ -1,5 +1,7 @@
-from config.db import SessionLocal
+from config.db import SessionLocal,engine
 from sqlalchemy import text
+from model.evidince_model import Case,Base
+from services.blackboard_service import BlackboardService
 
 class TrafficDetector:
 
@@ -14,7 +16,7 @@ class TrafficDetector:
                 sessions,
                 baseline_sessions
             FROM sku_metrics
-                    """
+            """
 
             result = session.execute(text(query))
 
@@ -34,9 +36,14 @@ class TrafficDetector:
                         "sku_id": row["sku_id"],
                         "retailer": row["retailer"],
                         "anomaly_type": "traffic_drop",
-                        "severity": abs(change)
+                        "severity": round(float(abs(change)), 4)
                     }
 
                     cases.append(case)
+                if cases:
+                    Base.metadata.create_all(bind=engine)
+                    for case in cases:
+                        print(case)
+                        BlackboardService.write_case(case)
 
         return cases       
