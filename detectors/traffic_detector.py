@@ -14,7 +14,7 @@ class TrafficDetector:
                 sessions,
                 baseline_sessions
             FROM sku_metrics
-            """
+                    """
 
             result = session.execute(text(query))
 

@@ -15,6 +15,7 @@ import os
 
 load_dotenv()
 
+
 class SupervisorState(AgentState):
     sku_id : str
     anomaly_type : str
@@ -25,13 +26,13 @@ class SupervisorAgent:
 
     def __init__(self):
         self.db = SessionLocal()
-        st.set_page_config(page_title='Solomon Council',layout='wide')
         st.title("🛡️ Solomon Council: Multi-Agent System")
+        st.set_page_config(page_title='Solomon Council',layout='wide')
 
         self.model = ChatGoogleGenerativeAI(
             model = "gemini-2.5-flash",
             google_api_key = os.getenv('GOOGLE_API_KEY'),
-            temperature = 0
+            temperature = 0,
         )
 
     def parse_sku_from_ai(self, ai_response):
