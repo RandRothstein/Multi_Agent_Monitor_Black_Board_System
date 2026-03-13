@@ -1,12 +1,9 @@
-from config.db import SessionLocal,engine
+from config.db import SessionLocal
 from sqlalchemy import text
+from orchestrator.helper import parse_sku_from_ai,run_cases
 #from agents.conversion.price_agent import PriceAgent
-from agents.traffic.traffic_agent import TrafficAgent
-from services.blackboard_service import BlackboardService
-
-from langchain.agents import create_agent,AgentState
+from langchain.agents import AgentState
 from langchain_google_genai import ChatGoogleGenerativeAI
-from model.evidince_model import Base
 import streamlit as st
 from dotenv import load_dotenv
 import os
@@ -31,30 +28,6 @@ class SupervisorAgent:
             google_api_key = os.getenv('GOOGLE_API_KEY'),
             temperature = 0,
         )
-
-    def parse_sku_from_ai(self, ai_response):
-
-        content = ai_response.content if hasattr(ai_response,'content') else str(ai_response)
-
-        return content.strip()
-    
-    def run_cases(self, case):
-        agents = []
-        findings = []
-        if case['anomaly_type'] =='traffic_drop':
-
-            agents = [#PriceAgent(case)
-                      TrafficAgent(self.db,case['sku_id'])  
-                    ]
-        for agent in agents:
-            result = agent.run()
-
-            if result:
-                #print(f"end: {result}")
-                BlackboardService.write_evidence(result)
-                findings.append(result)
-
-        return findings
     
     def user_interface(self):
         user_query = st.text_area("Ask your question about any product (e.g., 'Check status for SKU_123')",height = 100)
@@ -63,21 +36,21 @@ class SupervisorAgent:
                 {"role": "user", "content": f"Extract the SKU ID from this query: {user_query}. Return ONLY the ID (e.g. SKU-002). If no ID is found, return 'None'."}
             ]
             response = self.model.invoke(messages)
-            extracted_sku = self.parse_sku_from_ai(response)
+            extracted_sku = parse_sku_from_ai(response)
 
             if extracted_sku and extracted_sku != None:
 
                 query = text("""
-                        SELECT agent_name, severity_score, finding_summary, created_at
-                    FROM dbo.evidence 
-                    WHERE product_id = :sku_id
-                    ORDER BY created_at DESC                         
+                        SELECT TOP 1 sku_id,anomaly_type, severity
+                    FROM dbo.[case] 
+                    WHERE sku_id = :sku_id                        
                         """)
                 cases = self.db.execute(query,{'sku_id':extracted_sku}).mappings().fetchall()
                 if cases:
-                    self.display_results(cases)
+                    findings = run_cases(self.db,cases)   
+                    self.display_results(findings)
                 else:
-                    st.warning(f"No traffic anomalies found in the database for SKU: {extracted_sku}")
+                    st.warning(f"No anomalies found in the database for SKU: {extracted_sku}")
             else:
                 st.error("Please Provide a valid SKU ID in you query.")
 
