@@ -31,7 +31,7 @@ class ConversionDetector:
                         "sku_id": row["sku_id"],
                         "retailer": row["product_name"],
                         "anomaly_type": "convertion_drop",
-                        "severity": round(float(abs(row['conversion_rate'])), 2)
+                        "severity": round(float(row['conversion_rate']), 2)
 
                     }
                     cases.append(case)

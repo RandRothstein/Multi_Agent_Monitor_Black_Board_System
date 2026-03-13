@@ -35,7 +35,7 @@ class TrafficDetector:
                         "sku_id": row["sku_id"],
                         "retailer": row["retailer"],
                         "anomaly_type": "traffic_drop",
-                        "severity": round(float(abs(change)), 4)
+                        "severity": round(float(abs(change)), 2)
                     }
 
                     cases.append(case)

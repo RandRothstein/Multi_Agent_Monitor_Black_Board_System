@@ -15,7 +15,7 @@ async def main():
     traffic = TrafficDetector()
     convertion = ConversionDetector()
 
-    result = await asyncio.gather(traffic.detect(),convertion.detect())
+    await asyncio.gather(traffic.detect(),convertion.detect())
 
 if __name__ == '__main__':
     asyncio.run(main())
