@@ -1,11 +1,10 @@
-from config.db import SessionLocal,engine
+from config.db import SessionLocal
 from sqlalchemy import text
-from model.evidince_model import Case,Base
 from services.blackboard_service import BlackboardService
 
 class TrafficDetector:
 
-    def detect(self):
+    async def detect(self):
 
         with SessionLocal() as session:
 
@@ -40,10 +39,9 @@ class TrafficDetector:
                     }
 
                     cases.append(case)
-                if cases:
-                    Base.metadata.create_all(bind=engine)
-                    for case in cases:
-                        print(case)
-                        BlackboardService.write_case(case)
+            if cases:
+                
+                for case in cases:
+                    BlackboardService.write_case(case)
 
-        return cases       
+        return None       
