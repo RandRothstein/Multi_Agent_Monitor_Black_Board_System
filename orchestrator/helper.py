@@ -1,4 +1,5 @@
 from agents.traffic.traffic_agent import TrafficAgent
+from agents.conversion.price_agent import PriceAgent
 from services.blackboard_service import BlackboardService
 
 
@@ -15,10 +16,17 @@ def run_cases(db_session,cases):
     for case in cases:
         agents = []
         if case.get('anomaly_type') == 'traffic_drop':
-                agents = [
-                    TrafficAgent(db_session,case['sku_id'])  
-                ]
+            agents = [
+                TrafficAgent(db_session,case['sku_id'])  
+            ]
+        if case.get('anomaly_type') == 'convertion_drop':
+            agents =[
+                PriceAgent(db_session,case['sku_id'])     
+            ]
 
+        print(agents)
+        if not agents:
+            continue
         for agent in agents:
             result = agent.run()
 

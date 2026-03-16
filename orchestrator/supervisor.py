@@ -41,11 +41,12 @@ class SupervisorAgent:
             if extracted_sku and extracted_sku != None:
 
                 query = text("""
-                        SELECT TOP 1 sku_id,anomaly_type, severity
+                        SELECT sku_id,anomaly_type, severity
                     FROM dbo.[case] 
                     WHERE sku_id = :sku_id                        
                         """)
                 cases = self.db.execute(query,{'sku_id':extracted_sku}).mappings().fetchall()
+                print(cases)
                 if cases:
                     findings = run_cases(self.db,cases)   
                     self.display_results(findings)

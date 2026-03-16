@@ -41,13 +41,13 @@ class TrafficAgent(BaseAgent):
 
         if not result:
             return None
-        
+        data_for_prompt = [dict(row) for row in result]
         prompt = f"""
         You are a traffic anomaly analysis agent.
         A traffic detector found abnormal traffic behavior.
 
         SKU DATA:
-        {result}
+        {data_for_prompt}
 
         Tasks:
         1. Determine if traffic dropped significantly
