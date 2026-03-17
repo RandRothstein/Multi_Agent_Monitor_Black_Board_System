@@ -12,9 +12,9 @@ load_dotenv()
 
 class TrafficSourceAgent(BaseAgent):
 
-    def __init__(self,db,sku_id):
+    def __init__(self,db,sku_id,history_context=""):
         super().__init__(db,sku_id)
-
+        self.history_context = history_context
         self.llm = ChatGoogleGenerativeAI(
             model = "gemini-2.5-flash",
             google_api_key = os.getenv('GOOGLE_API_KEY'),
@@ -30,7 +30,6 @@ class TrafficSourceAgent(BaseAgent):
                 previous_sessions
             FROM dbo.traffic_sources
             WHERE sku_id = :sku_id
-            ORDER BY current_sessions DESC
         """)
 
         result = self.db.execute(
@@ -45,16 +44,15 @@ class TrafficSourceAgent(BaseAgent):
         source_data = [dict(row) for row in result]
         
         prompt = f"""
-        You are a Traffic Source Analysis Agent.
-        Your job is to identify which specific acquisition channel is causing a traffic anomaly.
+        Analyze traffic for {self.sku_id}. 
+        
+        TEAM HISTORY/PREVIOUS ACTIONS: {self.history_context}
+        CURRENT DATA: {source_data}
 
-        TRAFFIC SOURCE DATA:
-        {source_data}
-
-        Tasks:
-        1. Identify the source with the largest percentage drop (e.g., Paid Search, Organic).
-        2. Determine if the drop is isolated to one source or across all channels.
-        3. Provide a recommendation (e.g., "Check Facebook Ad Campaign" or "Investigate SEO indexing").
+        TASKS:
+        1. Identify the specific account (e.g. Target) and source causing the drop.
+        2. If history shows a fix was made, evaluate if traffic is recovering.
+        3. Recommend specific next steps.
 
         Return structured output.
         """

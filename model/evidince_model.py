@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime,Text
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -16,7 +16,7 @@ class Evidence(Base):
     metric_name = Column(String(100))
     metric_value = Column(Float)
     severity_score = Column(Float)
-    finding_summary = Column(String(1000))
+    finding_summary = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -28,4 +28,13 @@ class Case(Base):
     retailer = Column(String(50))
     anomaly_type = Column(String(50))
     severity = Column(Float)
+    revenue_impact = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ActionPlan(Base):
+    __tablename__ = "action_plans"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sku_id = Column(String(50))
+    action_note = Column(Text) # e.g., "Fixed Target promo issue"
+    status = Column(String(20), default="Monitoring") 
     created_at = Column(DateTime, default=datetime.utcnow)
