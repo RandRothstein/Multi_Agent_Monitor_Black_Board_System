@@ -16,7 +16,7 @@ class Evidence(Base):
     metric_name = Column(String(100))
     metric_value = Column(Float)
     severity_score = Column(Float)
-    finding_summary = Column(String(500))
+    finding_summary = Column(String(1000))
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
