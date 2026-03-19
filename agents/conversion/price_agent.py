@@ -11,9 +11,9 @@ load_dotenv()
 class PriceAgent(BaseAgent):
 
 
-    def __init__(self,db,sku_id):
+    def __init__(self,db,sku_id,history_context=""):
         super().__init__(db,sku_id)
-
+        self.history_context = history_context
         self.llm = ChatGoogleGenerativeAI(
             model = "gemini-2.5-flash",
             google_api_key = os.getenv('GOOGLE_API_KEY'),
@@ -44,9 +44,9 @@ class PriceAgent(BaseAgent):
         price_data = [dict(row) for row in result]
 
         prompt = f"""
-        You are a Price Competitiveness Agent.
+        You are a Price Competitiveness Agent for {self.sku_id}. 
+        TEAM HISTORY/PREVIOUS ACTIONS: {self.history_context}
         Your goal is to evaluate if our current price is causing a loss in market share or if we are leaving margin on the table.
-
         PRICING & COMPETITOR DATA:
         {price_data}
 

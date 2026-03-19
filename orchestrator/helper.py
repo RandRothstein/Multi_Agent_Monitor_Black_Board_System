@@ -23,7 +23,7 @@ def run_cases(db_session,cases):
             ]
         if case.get('anomaly_type') == 'convertion_drop':
             agents =[
-                PriceAgent(db_session,case['sku_id'])     
+                PriceAgent(db_session,case['sku_id'],history_context)     
             ]
 
         print(agents)
