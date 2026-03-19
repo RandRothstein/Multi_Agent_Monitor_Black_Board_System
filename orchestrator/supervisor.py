@@ -31,35 +31,38 @@ class SupervisorAgent:
             # 1. Initialize variables to avoid NameErrors
             if "current_sku" not in st.session_state:
                 st.session_state.current_sku = None
-            
-            user_query = st.text_area("Ask your question about any product (e.g., 'Check status for SKU_123')", height=100)
-            
-            if st.button('Analyze') and user_query:
-                messages = [
-                    {"role": "user", "content": f"Extract the SKU ID from this query: {user_query}. Return ONLY the ID (e.g. SKU-002). If no ID is found, return 'None'."}
-                ]
-                response = self.model.invoke(messages)
-                # Ensure this helper handles string "None" vs NoneType
-                extracted_sku = parse_sku_from_ai(response.content) 
+            if "show_action_plan" not in st.session_state:
+                st.session_state.show_action_plan = False
+
+            if not st.session_state.show_action_plan:
+                user_query = st.text_area("Ask your question about any product (e.g., 'Check status for SKU_123')", height=100)
                 
-                if extracted_sku and str(extracted_sku).lower() != "none":
-                    # Use a context manager or ensure the session is handled
-                    st.session_state.current_sku = extracted_sku
-                    query = text("""
-                        SELECT sku_id, anomaly_type, severity
-                        FROM dbo.[case] 
-                        WHERE sku_id = :sku_id
-                    """)
-                    result = self.db.execute(query, {'sku_id': extracted_sku})
-                    cases = result.mappings().fetchall()
+                if st.button('Analyze') and user_query:
+                    messages = [
+                        {"role": "user", "content": f"Extract the SKU ID from this query: {user_query}. Return ONLY the ID (e.g. SKU-002). If no ID is found, return 'None'."}
+                    ]
+                    response = self.model.invoke(messages)
+                    # Ensure this helper handles string "None" vs NoneType
+                    extracted_sku = parse_sku_from_ai(response.content) 
                     
-                    if cases:
-                        findings = run_cases(self.db, cases)   
-                        self.display_results(findings)
+                    if extracted_sku and str(extracted_sku).lower() != "none":
+                        # Use a context manager or ensure the session is handled
+                        st.session_state.current_sku = extracted_sku
+                        query = text("""
+                            SELECT sku_id, anomaly_type, severity
+                            FROM dbo.[case] 
+                            WHERE sku_id = :sku_id
+                        """)
+                        result = self.db.execute(query, {'sku_id': extracted_sku})
+                        cases = result.mappings().fetchall()
+                        
+                        if cases:
+                            findings = run_cases(self.db, cases)   
+                            self.display_results(findings)
+                        else:
+                            st.warning(f"No anomalies found in the database for SKU: {extracted_sku}")
                     else:
-                        st.warning(f"No anomalies found in the database for SKU: {extracted_sku}")
-                else:
-                    st.error("Please provide a valid SKU ID in your query.")
+                        st.error("Please provide a valid SKU ID in your query.")
 
             # 2. Guard the Action Plan section
             if st.session_state.current_sku:
@@ -76,24 +79,39 @@ class SupervisorAgent:
                 if prev_notes:
                     st.warning(f"**Last Meeting Note:** {prev_notes[0]}")
                 
-                action = st.text_area(f"What action are we taking for {extracted_sku}?", key=f"act_{extracted_sku}")    
+                action = st.text_area(f"What action are we taking for {extracted_sku}?")    
                 
-                if st.button("Save Action & Monitor", key=f"btn_{extracted_sku}"):
-                    if action:
-                        insert_query = text("""
-                            INSERT INTO dbo.action_plans (sku_id, action_note, status, created_at) 
-                            VALUES (:s, :a, 'Monitoring', GETDATE())
-                        """)
-                        try:
-                            self.db.execute(insert_query, {'s': extracted_sku, 'a': action})
-                            self.db.commit()
-                            st.success("Action saved successfully!")
-                        except Exception as e:
-                            self.db.rollback()
-                            st.error(f"Error saving to database: {e}")
-                    else:
-                        st.error("Please enter an action description before saving.")
-            
+                col1,col2 = st.columns(2)
+
+                with col1:
+                    if st.button("Save Action & Monitor"):
+                        if action:
+                            try:
+                                insert_query = text("""
+                                    INSERT INTO dbo.action_plans (sku_id, action_note, status, created_at) 
+                                    VALUES (:s, :a, 'Monitoring', GETDATE())
+                                """)
+                                self.db.execute(insert_query, {'s': extracted_sku, 'a': action})
+                                self.db.commit()
+
+                                st.session_state.current_sku = None
+                                st.session_state.show_action_plan = False
+                                st.success('Action saved and Saul is Monitoring ...')
+                                st.rerun()
+
+                            except Exception as e:
+                                self.db.rollback()
+                                st.error(f"Error: {e}")
+                        else:
+                            st.error("Please enter a note.")
+                with col2:
+                    if st.button("Cancel"):
+                        st.session_state.show_action_plan = False
+                        st.session_state.current_sku = None
+                        st.rerun()
+
+                        
+                        
     def display_results(self, findings):
         if not findings:
             st.info("No anomalies were analyzed for this SKU.")
