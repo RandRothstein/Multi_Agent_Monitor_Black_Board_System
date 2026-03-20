@@ -4,5 +4,5 @@ pydantic
 langchain
 langchain_google_genai
 dotenv
-streamlit
+fastapi
 langchain_community
