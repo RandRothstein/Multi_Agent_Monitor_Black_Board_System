@@ -3,8 +3,8 @@ from agents.conversion.price_agent import PriceAgent
 from services.blackboard_service import BlackboardService
 from sqlalchemy import text
 
-def parse_sku_from_ai(response):
-    return str(response).strip()
+def parse_sku_from_ai(text):
+    return text.strip()
 
 def run_cases(db_session, cases):
     findings = []

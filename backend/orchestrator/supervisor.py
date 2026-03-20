@@ -25,7 +25,7 @@ class SupervisorAgent:
             }]
 
             response = self.model.invoke(messages)
-            sku = parse_sku_from_ai(response)
+            sku = parse_sku_from_ai(response.content)
 
             if not sku or sku.lower() == "none":
                 return {"error": "Invalid SKU"}
@@ -45,18 +45,20 @@ class SupervisorAgent:
 
             # Step 4: Generate summary (LLM)
             summary_prompt = f"""
-            User asked: {user_query}
-            SKU: {sku}
-            Findings: {findings}
+            User query: {user_query}
 
-            Provide a clear business summary.
+            Summarize key business impact and recommended actions 
+            based on findings below in 3-4 concise points.
+
+            Findings:
+            {findings}
             """
 
             summary = self.model.invoke(summary_prompt)
 
             return {
                 "sku": sku,
-                "summary": str(summary),
+                "summary": summary.content,
                 "findings": findings
             }
 

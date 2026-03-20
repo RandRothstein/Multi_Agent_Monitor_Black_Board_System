@@ -52,7 +52,8 @@ class TrafficSourceAgent(BaseAgent):
         TASKS:
         1. Identify the specific account (e.g. Target) and source causing the drop.
         2. If history shows a fix was made, evaluate if traffic is recovering.
-        3. Recommend specific next steps.
+        3. Determine if trend is improving or declining
+        4. DO NOT suggest actions
 
         Return structured output.
         """
