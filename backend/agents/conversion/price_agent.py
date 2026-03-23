@@ -54,7 +54,7 @@ class PriceAgent(BaseAgent):
         1. Calculate the Price Index (Our Price / Competitor Price).
         2. Check if our current margin is still above the 'min_margin_percent' threshold.
         3. Identify if we are 'Overpriced', 'Underpriced', or 'At Parity' compared to competitors.
-        4. Recommend a price adjustment if we are losing competitiveness.
+        4. DO NOT suggest actions
 
         Return structured output.
         """
