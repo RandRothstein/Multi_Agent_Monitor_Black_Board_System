@@ -57,9 +57,9 @@ class SupervisorAgent:
             summary = self.model.invoke(summary_prompt)
 
             return {
-                "sku": sku,
-                "summary": summary.content,
-                "findings": findings
+                #"sku": sku,
+                "summary": summary.content
+                #"findings": findings
             }
 
         finally:
