@@ -6,6 +6,7 @@ import api from './api';
 export function ChatInput({messageData,setChatMessages}) {
   const [inputText,setInputText] = useState('');
   const [isLoading,setLoading] = useState(false);
+  const [sessionId] = useState(crypto.randomUUID());
   function saveInputText(event){
     setInputText(event.target.value);
   }
@@ -36,7 +37,7 @@ export function ChatInput({messageData,setChatMessages}) {
     ]);
     setInputText('');
     try {
-      const response = await api.post('/analyze',{ query: inputText});
+      const response = await api.post('/analyze',{ query: inputText,session_id: sessionId});
       const data = response.data;
       const messageText = data.summary || "No summary available.";
           setChatMessages([
