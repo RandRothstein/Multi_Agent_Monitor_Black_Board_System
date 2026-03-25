@@ -19,3 +19,8 @@
   display:flex;
   margin-bottom: 60px;
 }
+
+.loading-spinner {
+  height: 40px;
+  margin: -15px;
+}
