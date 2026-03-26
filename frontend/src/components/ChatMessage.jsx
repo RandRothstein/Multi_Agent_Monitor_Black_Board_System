@@ -5,7 +5,7 @@ import './ChatMessage.css';
 export function ChatMessage({message,sender}) {
   return (
     <div className={sender === 'user' ? 'chat-message-user' : 'chat-message-robot'}>
-      {sender === 'robat' && <img src={RobatProfileImage} className="chat-message-profile"/>}
+      {sender === 'robot' && <img src={RobatProfileImage} className="chat-message-profile"/>}
       <div className="chat-message-text">
         {message}
       </div>

@@ -17,7 +17,6 @@ export function ChatInput({messageData,setChatMessages}) {
     }
 
     setInputText('');
-    setLoading(true);
     const newChatMessages = [
       ...messageData,
       {
@@ -26,6 +25,7 @@ export function ChatInput({messageData,setChatMessages}) {
         id: crypto.randomUUID()
       }
     ]
+    setLoading(true);
     setChatMessages(newChatMessages);
     setChatMessages([
       ...newChatMessages,
@@ -40,11 +40,12 @@ export function ChatInput({messageData,setChatMessages}) {
       const response = await api.post('/analyze',{ query: inputText,session_id: sessionId});
       const data = response.data;
       const messageText = data.summary || "No summary available.";
-          setChatMessages([
+      
+      setChatMessages([
       ...newChatMessages,
       {
         message:messageText,
-        sender:'robat',
+        sender:'robot',
         id: crypto.randomUUID()
       }
     ]);
