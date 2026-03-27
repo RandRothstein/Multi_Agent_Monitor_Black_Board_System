@@ -8,6 +8,17 @@
   font-size: 15px;
   cursor: pointer;
 }
+
+.clear-button{
+  background-color: rgb(230, 230, 230);
+  color:black;
+  padding: 12px 20px;
+  margin-left:10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+}
 .chat-input{
   padding:12px 15px;
   border-radius:10px;

@@ -66,12 +66,17 @@ export function ChatInput({messageData,setChatMessages}) {
     else if (event.key === 'Escape'){
       setInputText('');            }
   }
+
+  function clearMessages(){
+    setChatMessages([]);
+  }
   return (
     <div className="chat-input-container">
       <input className="chat-input" placeholder="Send a message to Chatbot" size="30" 
       onChange={saveInputText} onKeyDown={handleKeyDown} value={inputText}
       />
       <button onClick={sendMessage} className="send-button">Send</button>
+      <button onClick={clearMessages} className="clear-button">Clear</button>
     </div>
   );
 }

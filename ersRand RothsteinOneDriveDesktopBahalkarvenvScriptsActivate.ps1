@@ -1,0 +1,186 @@
+[33mcommit 97ab11624cf1577d04e98d2c6f422a963a0d0c83[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mv3[m[33m)[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Thu Mar 26 11:47:32 2026 +0530
+
+    Buggfixed - Version
+
+[33mcommit ea8773971765bdc94c7a0baf8e9c4652be3b3f55[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Wed Mar 25 17:17:33 2026 +0530
+
+    Demo Version of continous chat model Yorman[WAY]-2
+
+[33mcommit 70526d85bddb349a2a5a04104db4756858464f5d[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 24 19:03:20 2026 +0530
+
+    Demo Version of continous chat model Yorman[WAY]
+
+[33mcommit 5cc1a6844f132877bc43db96eaa466b93e32f2b3[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 24 17:08:14 2026 +0530
+
+    Zero shot chat[Frontend + Backend]
+
+[33mcommit 298d8f4cddbb5c3bc2ee13243fa469b877f836ee[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Mon Mar 23 12:44:49 2026 +0530
+
+    Bugged Fixed Version
+
+[33mcommit 5fdfcbe5528f4caae8e2cbc8b1aaaa6f957348fb[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Mon Mar 23 12:44:16 2026 +0530
+
+    Bugged Fixed Version
+
+[33mcommit 4d0fed7e535d2532a76eff7dac278231b49fc1f4[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mv2[m[33m)[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Fri Mar 20 14:28:53 2026 +0530
+
+    Working Backend Demo
+
+[33mcommit bcc097a65d11ec6cb1d66776ce955fe7e6ce9f91[m[33m ([m[1;31morigin/v2[m[33m)[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Fri Mar 20 14:18:24 2026 +0530
+
+    Working Backend
+
+[33mcommit 69908d9157c368c5e9dfe73f62a6e8391690d4ed[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Fri Mar 20 13:27:12 2026 +0530
+
+    Full Stack
+
+[33mcommit 183f02a267be25faf2089b5c3f51cb8b03cd8b47[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Thu Mar 19 14:10:12 2026 +0530
+
+    DEMO 20th Client Version of Soul [Stable Version]
+
+[33mcommit 6f7bdce31a429db493159f0d46a885852d89070d[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Thu Mar 19 12:59:01 2026 +0530
+
+     Demo Version: Add Monitoring feature [STABLE VERSION]
+
+[33mcommit 1b90139b4b40685b5d419343966d34f6f22d6787[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 17 18:52:30 2026 +0530
+
+    Demo Version: Add Monitoring feature
+
+[33mcommit bf129ec9c5369f52b63fe9c1cdce610e06308bba[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 17 12:22:53 2026 +0530
+
+    DEMO MODEL: added convertion_detector,traffic_detector and price_agent
+
+[33mcommit 3d3f6174cba6f13916e6b4aae803f68a6461e89e[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Mon Mar 16 17:41:09 2026 +0530
+
+    DEMO MODEL: added convertion_detector,traffic_detector and price_agent
+
+[33mcommit e3de2817f36c284a7c532947d5787d3c723ca73d[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Fri Mar 13 18:20:33 2026 +0530
+
+    Added helper.py file, now we ask the supervisor to run the subagents for particular id in chat.
+
+[33mcommit 37f1cf7cd1991eb54f2263db06801f86f030394e[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Fri Mar 13 11:45:55 2026 +0530
+
+    Added convertion detector,asyncio on two detectors
+
+[33mcommit 171261c30ff14853f3e63dc7d273fb778c65aa40[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Fri Mar 13 11:45:45 2026 +0530
+
+    Added convertion detector,asyncio on two detectors
+
+[33mcommit fa6262bcadf4c6c7122dd040bb4c8f81653a3631[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Thu Mar 12 17:34:58 2026 +0530
+
+    This modified code only checks evidience db , need to add logic for run_cases function in supervisor.py
+
+[33mcommit 0a4004bbb8f7c56a6c1f61f60459cd27b8ed57db[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Thu Mar 12 14:21:05 2026 +0530
+
+    Created case database modified only on traffic detector
+
+[33mcommit fc96b73c15322067747889b5a8954025be19f2f0[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Thu Mar 12 09:48:05 2026 +0530
+
+    First version of saul monitor with llm chat
+
+[33mcommit ad1284aa553ddf7602c5ef34543e9de437b8a2cf[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Wed Mar 11 17:05:31 2026 +0530
+
+    Integrated LLM with supervisor, traffic_agent with one-shot chat
+
+[33mcommit a6a0008253ffd21f14f35a33606e27bee42accde[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Wed Mar 11 15:32:50 2026 +0530
+
+    LLm integration with supervisor
+
+[33mcommit 328a17b76f11f9613d67c930c617b79c097e44f7[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Wed Mar 11 15:31:14 2026 +0530
+
+    LLm integration with supervisor
+
+[33mcommit 10c817d4d651b21154186bf6c6f35e5fe7ef0884[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Wed Mar 11 15:30:15 2026 +0530
+
+    LLm integration with supervisor
+
+[33mcommit 93b163f76feff3aa1d762a66ee3038f7aa2017d1[m[33m ([m[1;32mv1[m[33m)[m
+Merge: f3567d6 e7d62b9
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 10 17:35:16 2026 +0530
+
+    Merge branch 'v1' of https://github.com/RandRothstein/Bhalekar_Multi_Agent_Monitor
+
+[33mcommit f3567d65a7227034ddccc9ce006608ace86ce777[m[33m ([m[1;32mmaster[m[33m)[m
+Author: RandBhalekar <rand@bhalekar.ai>
+Date:   Tue Mar 10 17:12:16 2026 +0530
+
+    Pushing from personal git account to company account
+
+[33mcommit e7d62b9fc4857085e9bf9525f8163ac0ef3c53fd[m[33m ([m[1;31morigin/v1[m[33m)[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 10 13:12:52 2026 +0530
+
+    Fixed the product id not detected in evidience table due to type missmatch(int --> str)
+
+[33mcommit 87a6e7b9c5d2c12ce2668348c847ae5ea574d883[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 10 13:08:20 2026 +0530
+
+    Fixed the product id not detected in evidience table due to type missmatch(int --> str)
+
+[33mcommit d9d6458f75c2948817b170555d048cad26093ffe[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 10 12:26:52 2026 +0530
+
+    Added the displaying method to show number of tokens used by traffic_agent on each call
+
+[33mcommit a207c7e5eda20ea42d82a0c9e14ac2848213a95d[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Tue Mar 10 11:58:40 2026 +0530
+
+    Gemini-2.5-flash LLM model integrated to traffic_agent,Provides['Determiation','Estimate Deviation','Recommendation']
+
+[33mcommit 704cc9481b759cbac9ad145066ff52a12e5e0028[m
+Author: Rand Rothstein <randrothstein17@gmail.com>
+Date:   Mon Mar 9 16:04:11 2026 +0530
+
+    This is the base skeleton version of Saul it as traffic detector==traffic agent , supervisor which desides based on case['anamoly']
