@@ -20,7 +20,7 @@ The system follows a cyclic graph pattern where a central **Supervisor** (Gemini
 
 | Component | Technology |
 | :--- | :--- |
-| **Frontend** | React, Axios, Tailwind CSS |
+| **Frontend** | React, Axios, CSS |
 | **Backend** | FastAPI, Uvicorn |
 | **AI Framework** | LangGraph, LangChain |
 | **LLM** | Google Gemini 2.0 Flash |
