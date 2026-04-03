@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime,Text
+from sqlalchemy import Column, Integer, String, Float, DateTime,Text,JSON
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -38,3 +38,13 @@ class ActionPlan(Base):
     action_note = Column(Text) # e.g., "Fixed Target promo issue"
     status = Column(String(20), default="Monitoring") 
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ChatState(Base):
+    __tablename__ = "chat_state"
+
+    session_id = Column(String(100),primary_key=True)
+    current_sku = Column(String(50),nullable=True)
+
+    findings = Column(JSON,nullable=True)
+    history = Column(JSON,default=[])

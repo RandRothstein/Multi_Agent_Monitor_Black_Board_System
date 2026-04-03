@@ -4,10 +4,9 @@ from sqlalchemy import text
 
 from agents.base_agent import BaseAgent
 from model.structured_output_model import StructuredOutput
-
-from langchain.agents import create_agent
-from langchain_google_genai import ChatGoogleGenerativeAI
+#from langchain.chat_models import ChatOpenAI
 from langchain_community.callbacks.manager import get_openai_callback
+from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
 
 class TrafficSourceAgent(BaseAgent):
@@ -16,9 +15,9 @@ class TrafficSourceAgent(BaseAgent):
         super().__init__(db,sku_id)
         self.history_context = history_context
         self.llm = ChatGoogleGenerativeAI(
-            model = "gemini-2.5-flash",
-            google_api_key = os.getenv('GOOGLE_API_KEY'),
-            temperature = 0
+            model="gemini-2.5-flash",
+            google_api_key=os.getenv('GOOGLE_API_KEY'),
+            temperature=0,
         ).with_structured_output(StructuredOutput)
 
     def run(self):

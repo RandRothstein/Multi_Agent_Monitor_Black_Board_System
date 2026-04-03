@@ -3,35 +3,40 @@ from agents.conversion.price_agent import PriceAgent
 from services.blackboard_service import BlackboardService
 from sqlalchemy import text
 
-def parse_sku_from_ai(text):
-    return text.strip()
+def get_sku_action_history(db_session, sku_id):
+    """Utility to fetch the human/team action history for a SKU."""
+    history_query = text(
+        "SELECT action_note FROM action_plans WHERE sku_id = :sku_id"
+    )
+    history = db_session.execute(history_query, {'sku_id': sku_id}).fetchall()
+    return " ".join([h[0] for h in history if h[0]])
 
-def run_cases(db_session, cases):
-    findings = []
+def execute_agent(db_session, sku_id, agent_type):
+    """
+    Executes a specific agent. 
+    This is called by the individual nodes in nodes.py.
+    """
+    history_context = get_sku_action_history(db_session, sku_id)
+    
+    # Map the node strings to actual Agent Classes
+    agent_map = {
+        "traffic": TrafficSourceAgent,
+        #"rank": RankAgent,
+        "price": PriceAgent,
+        #"suppression": SuppressionAgent
+    }
+    
+    agent_class = agent_map.get(agent_type)
+    if not agent_class:
+        return None
 
-    for case in cases:
-        agents = []
+    # Instantiate and run
+    agent = agent_class(db_session, sku_id, history_context)
+    result = agent.run()
 
-        history_query = text(
-            "SELECT action_note FROM action_plans WHERE sku_id = :sku_id"
-        )
-        history = db_session.execute(
-            history_query, {'sku_id': case['sku_id']}
-        ).fetchall()
-
-        history_context = " ".join([h[0] for h in history])
-
-        if case.get('anomaly_type') == 'traffic_drop':
-            agents = [TrafficSourceAgent(db_session, case['sku_id'], history_context)]
-
-        elif case.get('anomaly_type') == 'conversion_drop':
-            agents = [PriceAgent(db_session, case['sku_id'], history_context)]
-
-        for agent in agents:
-            result = agent.run()
-
-            if result:
-                BlackboardService.write_evidence(result)
-                findings.append(result)
-
-    return findings
+    if result:
+        # Keep your Blackboard service for external logging/auditing
+        BlackboardService.write_evidence(result)
+        return result
+    
+    return None

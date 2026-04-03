@@ -30,7 +30,7 @@ class ConversionDetector:
                     case = {
                         "sku_id": row["sku_id"],
                         "retailer": row["product_name"],
-                        "anomaly_type": "convertion_drop",
+                        "anomaly_type": "conversion_drop",
                         "severity": round(float(row['conversion_rate']), 2)
 
                     }
