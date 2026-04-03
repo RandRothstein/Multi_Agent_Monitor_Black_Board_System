@@ -2,6 +2,9 @@
 
 A sophisticated multi-agent orchestration system designed to investigate SKU performance anomalies using a **Supervisor-Worker** pattern.
 
+<img width="694" height="904" alt="image" src="https://github.com/user-attachments/assets/6e35628f-e939-4039-9daa-33611c7bfa89" />
+
+
 ---
 
 ## 🏗️ Architecture Overview
