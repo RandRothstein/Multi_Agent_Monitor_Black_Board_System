@@ -2,7 +2,8 @@ sqlalchemy
 pyodbc
 pydantic
 langchain
-langchain_google_genai
 dotenv
 fastapi
 langchain_community
+langchain_google_genai
+uvicorn
