@@ -1,9 +1,8 @@
 import os
-from sqlalchemy import text
 from pydantic import Field , BaseModel
 from typing import Literal
-#from langchain.chat_models import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
+# from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from config.db import SessionLocal
 from model.evidince_model import ChatState
@@ -11,15 +10,18 @@ from orchestrator.helper import execute_agent
 from langchain_community.callbacks.manager import get_openai_callback
 
 
-model = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            google_api_key=os.getenv('GOOGLE_API_KEY'),
-            temperature=0,
+model = ChatOllama(
+    model="qwen2.5:1.5b",
+    temperature=0,
 )
 
 class RouterResponse(BaseModel):
-    next_node: Literal["traffic_node", "price_node", "summarize"]
-    reasoning: str = Field(description="Brief explanation of why this node was chosen")
+    next_node: Literal["amazonvc_node", "summarize"]
+    reasoning: str = Field(description="Explanation of why this node was chosen")
+    direct_response: str = Field(
+        default="", 
+        description="If you can answer the user directly from findings or context without calling a node, provide the full answer here."
+    )
 
 # --- SETUP NODES ---
 def extract_sku(state):
@@ -40,7 +42,7 @@ def extract_sku(state):
                 Extract ONLY the SKU from this text.
 
                 Rules:
-                - SKU is alphanumeric (e.g., SKU123, ABC-123)
+                - SKU is alphanumeric (e.g., B08SRDLYTR ,B08SRDLYTR)
                 - Return ONLY the SKU
                 - Do NOT return code
                 - Do NOT explain
@@ -60,13 +62,6 @@ def extract_sku(state):
     db.close()
     return {"sku": sku if sku and sku.lower() != "none" else None, "history": history}
 
-def fetch_cases(state):
-    if not state["sku"]: return {"cases": []}
-    db = SessionLocal()
-    query = text("SELECT anomaly_type, severity FROM dbo.[case] WHERE sku_id = :sku")
-    result = db.execute(query, {"sku": state["sku"]}).mappings().fetchall()
-    db.close()
-    return {"cases": [dict(r) for r in result]}
 
 # --- SUPERVISOR (The Decision Maker) ---
 def supervisor_node(state):
@@ -76,49 +71,58 @@ def supervisor_node(state):
     user_query = state.get("user_query", "").lower()
     iterations = state.get("iterations", 0)
 
-    if iterations >= 3: # Increased limit for more complex multi-step tasks
+    if iterations >= 3:
         return {"next_node": "summarize", "iterations": iterations + 1}
     
-    # Track what we found in DB vs what we've already done
-    unsolved_anomalies = [c['anomaly_type'] for c in cases]
+    #unsolved_anomalies = [c['anomaly_type'] for c in cases]
     solved_anomalies = [f.get('anomaly_type') for f in findings if isinstance(f, dict)]
-    remaining_db_tasks = [a for a in unsolved_anomalies if a not in solved_anomalies]
+    #remaining_db_tasks = [a for a in unsolved_anomalies if a not in solved_anomalies]
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", (
             "You are the Analysis Manager for SKU: {sku}.\n"
             "CURRENT CONTEXT:\n"
-            "- Anomalies found in DB: {remaining_tasks}\n"
-            "- Completed Analysis: {solved_anomalies}\n\n"
+            #"- Anomalies found in DB: {remaining_tasks}\n"
+            #"- Completed Analysis Findings: {solved_anomalies}\n"
+            "- Raw Data/Findings: {findings}\n\n"
             "YOUR MISSION:\n"
-            "1. Priority 1: If the user explicitly asks to run a specific check (e.g., 'Check market trends'), prioritize that even if not in DB.\n"
-            "2. Priority 2: Investigate the DB anomalies listed above.\n"
-            "3. Priority 3: If all tasks are done or user query is satisfied, choose 'summarize'.\n\n"
+            "1. If the user asks a general question (e.g., 'Hello', 'What can you do?') or the answer is already in the 'Raw Data/Findings', do NOT call a sub-agent.\n"
+            "2. In such cases, set 'next_node' to 'summarize' and write your full answer in 'direct_response'.\n"
+            "3. If specific analysis is still needed (e.g., checking PPM or traffic), choose 'amazonvc_node'.\n\n"
             "AVAILABLE NODES:\n"
-            "- traffic_node: Use for traffic, clicks, or session drops.\n"
-            "- price_node: Use for buy-box, pricing, or conversion issues.\n"
-            "- market_node: Use for general market trends or competitor research.\n"
+            "- amazonvc_node: Use for Amazon Vendor Central data, PPM, or shipping issues.\n"
+            "- summarize: Use if you are done or can answer now."
         )),
         ("human", "{user_query}")
     ])
     
     chain = prompt | model.with_structured_output(RouterResponse)
+    
     with get_openai_callback() as cb:
         response = chain.invoke({
-                "sku": sku, 
-                "remaining_tasks": remaining_db_tasks, 
-                "solved_anomalies": solved_anomalies,
-                "user_query": user_query
-            })
-        print("---- Supervisor SubAgent Descision ----")
-        print(f"Total Tokens: {cb.total_tokens} | Cost: ${cb.total_cost}")
-        print("--------------------------------")
+            "sku": sku, 
+            #"remaining_tasks": remaining_db_tasks, 
+            #"solved_anomalies": solved_anomalies,
+            "findings": findings, # Pass the actual findings so it can read them
+            "user_query": user_query
+        })
     
     print(f"--- Supervisor Decision: {response.next_node} ---")
-    return {"next_node": response.next_node, "iterations": iterations + 1}
+    
+    # If the supervisor provided a direct answer, we store it in findings 
+    # so the 'summarize' node can see it immediately.
+    updates = {
+        "next_node": response.next_node, 
+        "iterations": iterations + 1
+    }
+    
+    if response.direct_response:
+        updates["findings"] = [{"direct_answer": response.direct_response}]
+        
+    return updates
 
 # --- WORKER NODES (Sub-Agents) ---
-def traffic_node(state):
+def amazonvc_node(state):
     db = SessionLocal()
     sku = state["sku"]
     
@@ -129,34 +133,36 @@ def traffic_node(state):
     # Return as a list because GraphState findings uses operator.add
     return {"findings": [finding] if finding else []}
 
-def price_node(state):
-    db = SessionLocal()
-    sku = state["sku"]
-    
-    finding = execute_agent(db, sku, "price")
-    
-    db.close()
-    return {"findings": [finding] if finding else []}
-
 
 # --- SUMMARIZER ---
 def summarize(state):
-    db = SessionLocal()
-    findings = "\n".join([str(f) for f in state.get("findings", [])])
-    prompt = f"History: {state['history'][-2:]}\nQuery: {state['user_query']}\nFindings: {findings}\n\nSummarize the results."
-    with get_openai_callback() as cb:
-        res = model.invoke(prompt)
-        print("---- Summarization Tokens ----")
-        print(f"Total Tokens: {cb.total_tokens} | Cost: ${cb.total_cost}")
-        print("-------------------------------")
+    findings_list = state.get("findings", [])
     
-    # Update DB History
-    chat_state = db.query(ChatState).filter_by(session_id=state["session_id"]).first()
-    if chat_state:
-        updated_hist = list(chat_state.history or [])
-        updated_hist.append({"role": "user", "content": state["user_query"]})
-        updated_hist.append({"role": "assistant", "content": res.content})
-        chat_state.history = updated_hist
-        db.commit()
-    db.close()
-    return {"user_query": res.content} # Return final answer
+    # 1. Do the "heavy" LLM work FIRST without an active DB session
+    direct_answer = next((f["direct_answer"] for f in findings_list if isinstance(f, dict) and "direct_answer" in f), None)
+    
+    if direct_answer:
+        final_response = direct_answer
+    else:
+        findings_str = "\n".join([str(f) for f in findings_list])
+        prompt = f"History: {state['history'][-2:]}\nQuery: {state['user_query']}\nFindings: {findings_str}\n\nSummarize the results."
+        res = model.invoke(prompt)
+        final_response = res.content
+
+    # 2. NOW open the DB just to save and close immediately
+    db = SessionLocal()
+    try:
+        chat_state = db.query(ChatState).filter_by(session_id=state["session_id"]).first()
+        if chat_state:
+            updated_hist = list(chat_state.history or [])
+            updated_hist.append({"role": "user", "content": state["user_query"]})
+            updated_hist.append({"role": "assistant", "content": final_response})
+            chat_state.history = updated_hist
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Database error: {e}")
+    finally:
+        db.close()
+    
+    return {"user_query": final_response}

@@ -7,26 +7,21 @@ def build_graph():
 
     # Add Nodes
     workflow.add_node("extract_sku", extract_sku)
-    workflow.add_node("fetch_cases", fetch_cases)
     workflow.add_node("supervisor", supervisor_node)
-    workflow.add_node("traffic_node", traffic_node)
-    workflow.add_node("price_node", price_node)
+    workflow.add_node("amazonvc_node", amazonvc_node)
     # workflow.add_node("rank_node", rank_node)
     # workflow.add_node("suppression_node", suppression_node)
     workflow.add_node("summarize", summarize)
 
     # Define Fixed Flow
     workflow.set_entry_point("extract_sku")
-    workflow.add_edge("extract_sku", "fetch_cases")
-    workflow.add_edge("fetch_cases", "supervisor")
 
     # Define Dynamic Routing (The Supervisor's choice)
     workflow.add_conditional_edges(
         "supervisor",
         lambda x: x["next_node"],
         {
-            "traffic_node": "traffic_node",
-            "price_node": "price_node",
+            "amazonvc_node": "amazonvc_node",
             "summarize": "summarize",
             # "rank_node": "rank_node",
             # "suppression_node": "suppression_node"
@@ -34,9 +29,8 @@ def build_graph():
     )
 
     # All workers go BACK to supervisor for the next instruction
-    workflow.add_edge("traffic_node", "supervisor")
-    workflow.add_edge("price_node", "supervisor")
-    
+    workflow.add_edge("extract_sku", "supervisor")
+    workflow.add_edge("amazonvc_node", "supervisor")
     workflow.add_edge("summarize", END)
 
     return workflow.compile()

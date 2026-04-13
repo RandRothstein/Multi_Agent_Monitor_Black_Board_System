@@ -1,5 +1,4 @@
-from agents.traffic.traffic_agent import TrafficSourceAgent
-from agents.conversion.price_agent import PriceAgent
+from agents.traffic.amazonVC_agent import AmazonVCAgent
 from services.blackboard_service import BlackboardService
 from sqlalchemy import text
 
@@ -20,10 +19,7 @@ def execute_agent(db_session, sku_id, agent_type):
     
     # Map the node strings to actual Agent Classes
     agent_map = {
-        "traffic": TrafficSourceAgent,
-        #"rank": RankAgent,
-        "price": PriceAgent,
-        #"suppression": SuppressionAgent
+        "traffic": AmazonVCAgent,
     }
     
     agent_class = agent_map.get(agent_type)
