@@ -49,7 +49,6 @@ class AmazonVCAgent(BaseAgent):
 
         prompt = f"""
         Your the Amazon VC sub-agent in the SOL architecture for SKU_ID: {self.sku_id}.
-        TEAM HISTORY/PREVIOUS ACTIONS: {self.history_context}
         
         GOAL: Detect suppression, PPM risks, and operational compliance issues.
         

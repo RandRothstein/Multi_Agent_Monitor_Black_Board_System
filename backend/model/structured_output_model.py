@@ -1,12 +1,26 @@
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import List, Optional, Dict, Any
 
+class MetricSignal(BaseModel):
+    metric_name: str
+    metric_value: Optional[float] = None
+    baseline_value: Optional[float] = None
+    deviation_pct: Optional[float] = None
+    severity: str  # LOW / MEDIUM / HIGH / CRITICAL
+    is_anomaly: bool
 
 class StructuredOutput(BaseModel):
-    product_id: str = Field(description='The sku_id which was detected')
-    agent_name: str = Field(description='The name of the agent which is returning this response')
-    metric_name: str = Field(description='The type of anomaly the sku_id shows')
-    metric_value: float = Field(description="Specifies how much its deviating from normal")
-    severity_score: float = Field(description="Based on loss amount of the product")
-    finding_summary: str = Field(description="Give the summary of findings and also recomendation to solve this")
-    
+    product_id: str
+    agent_name: str
+
+    # Multiple signals instead of single metric
+    signals: List[MetricSignal]
+
+    # SA-2 intelligence layer
+    anomaly_type: str  # suppression / traffic_drop / ppm_risk / ncx_spike / oos / compliance
+    risk_score: float  # 0–100
+
+    finding_summary: str
+    recommendation: str
+
+    data_sources: List[str] = Field(default_factory=list)

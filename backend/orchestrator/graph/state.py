@@ -14,3 +14,4 @@ class GraphState(TypedDict):
     history: List[Dict]
     next_node: str
     iterations: int
+    history_context:str

@@ -8,12 +8,17 @@ class BlackboardService:
         with SessionLocal() as session:
             try:
                 new_evidience = Evidence(
-                    product_id=data["product_id"],
-                    agent_name=data["agent_name"],
-                    metric_name=data["metric_name"],
-                    metric_value=data["metric_value"],
-                    severity_score=data["severity_score"],
-                    finding_summary=data["finding_summary"]
+                product_id=data.get("product_id"),
+                agent_name=data.get("agent_name"),
+
+                anomaly_type=data.get("anomaly_type"),
+                risk_score=data.get("risk_score"),
+
+                # store full signals JSON
+                signals=data.get("signals", []),
+
+                finding_summary=data.get("finding_summary"),
+                recommendation=data.get("recommendation"),
                 )
                 session.add(new_evidience)
                 session.commit()

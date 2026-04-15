@@ -9,14 +9,20 @@ Base = declarative_base()
 class Evidence(Base):
     __tablename__ = "evidence"
 
-    # 3. Defining the columns
     id = Column(Integer, primary_key=True, autoincrement=True)
+
     product_id = Column(String(50), index=True)
     agent_name = Column(String(50))
-    metric_name = Column(String(100))
-    metric_value = Column(Float)
-    severity_score = Column(Float)
+
+    anomaly_type = Column(String(50), index=True)
+    risk_score = Column(Float)
+
+    # NEW: store full SA-2 structured output
+    signals = Column(JSON)
+
     finding_summary = Column(Text)
+    recommendation = Column(Text)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

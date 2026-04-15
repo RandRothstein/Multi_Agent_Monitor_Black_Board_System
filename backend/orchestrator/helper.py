@@ -1,10 +1,7 @@
 from agents.traffic.amazonVC_agent import AmazonVCAgent
 from services.blackboard_service import BlackboardService
 from sqlalchemy import text
-from functools import lru_cache
 
-# Cache history for the duration of a single request to avoid repeated DB hits
-@lru_cache(maxsize=32)
 def get_sku_action_history(db_session, sku_id):
     """Utility to fetch the action history with optimized string joining."""
     history_query = text(
@@ -28,23 +25,14 @@ def execute_agent(db_session, sku_id, agent_type):
     agent_class = AGENT_MAP.get(agent_type)
     if not agent_class:
         return None
-
-    # Fetch context (Cached if called multiple times in one loop)
-    history_context = get_sku_action_history(db_session, sku_id)
     
     # Run agent
-    agent = agent_class(db_session, sku_id, history_context)
+    agent = agent_class(db_session, sku_id)
     result = agent.run()
 
     if result:
         # Check if result is a list or dict before passing to evidence
-        BlackboardService.write_evidence(result)
-        
-        # CRITICAL: Ensure result contains 'anomaly_type' so the 
-        # Supervisor knows this task is finished.
-        if isinstance(result, dict) and "anomaly_type" not in result:
-            result["anomaly_type"] = agent_type
-            
+        BlackboardService.write_evidence(result)    
         return result
     
     return {"anomaly_type": agent_type, "status": "no_data_found"}

@@ -1,5 +1,5 @@
 sqlalchemy
-pyodbc
+aioodbc
 pydantic
 langchain
 dotenv

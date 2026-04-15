@@ -1,6 +1,4 @@
-import os
-import re
-import time
+import os, time, re
 from pydantic import Field , BaseModel
 from typing import Literal, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -8,7 +6,7 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from config.db import SessionLocal
 from model.evidince_model import ChatState
-from orchestrator.helper import execute_agent
+from orchestrator.helper import execute_agent, get_sku_action_history
 from langchain_community.callbacks.manager import get_openai_callback
 
 
@@ -33,20 +31,29 @@ class RouterResponse(BaseModel):
 
 # --- SETUP NODES ---
 def extract_sku(state):
-    # Improved pattern for Amazon ASINs/SKUs (usually 10 alphanumeric)
     start = time.perf_counter()
+
     sku_pattern = r'\b[A-Z0-9]{8,12}\b'
     user_query = state.get('user_query', '').upper()
     regex_match = re.search(sku_pattern, user_query)
-    
+
     db = SessionLocal()
     session_id = state["session_id"]
+
     chat_state = db.query(ChatState).filter_by(session_id=session_id).first()
 
     if not chat_state:
-        chat_state = ChatState(session_id=session_id, history=[], findings=None)
+        chat_state = ChatState(
+            session_id=session_id,
+            history=[],
+            findings=None
+        )
         db.add(chat_state)
         db.commit()
+
+    # ✅ ALWAYS define safely
+    history = list(chat_state.history or [])
+    history_context = ""
 
     sku = chat_state.current_sku
 
@@ -54,19 +61,29 @@ def extract_sku(state):
         if regex_match:
             sku = regex_match.group(0)
         else:
-            # Fallback to LLM if regex misses
-            res = model.invoke(f"Extract ONLY the SKU from this text. If none, return 'None'. Text: {state['user_query']}")
+            res = model.invoke(
+                f"Extract ONLY the SKU from this text. If none, return 'None'. Text: {state['user_query']}"
+            )
             sku = res.content.strip().replace("`", "")
-        
+
         if sku and sku.lower() != "none":
             chat_state.current_sku = sku
+
+            # only fetch context when valid SKU exists
+            history_context = get_sku_action_history(db, sku)
+
             db.commit()
 
-    history = list(chat_state.history or [])
     db.close()
+
     end = time.perf_counter()
     print(f"Extract SKU execution time: {end - start:.4f} seconds")
-    return {"sku": sku if sku and sku.lower() != "none" else None, "history": history}
+
+    return {
+        "sku": sku if sku and sku.lower() != "none" else None,
+        "history": history,
+        "history_context": history_context
+    }
 
 # --- SUPERVISOR (The Decision Maker) ---
 def supervisor_node(state):
@@ -77,6 +94,7 @@ def supervisor_node(state):
     iterations = state.get("iterations", 0)
     history = state.get('history', [])[-2:]
     history_str = "\n".join([f"{h['role']}: {h['content']}" for h in history])
+    history_context = state.get("history_context", "")
 
     # 1. Termination condition
     if iterations >= 3:
@@ -90,6 +108,7 @@ def supervisor_node(state):
             "You are the Lead Analyst for Amazon Vendor Central.\n"
             "CURRENT SKU: {sku}\n"
             "FINDINGS SO FAR: {findings}\n\n"
+            f"ACTION HISTORY:\n{history_context}\n\n"
             f"History (last 2):\n{history_str}\n"
             "CHECKS ALREADY PERFORMED: {solved_anomalies}\n\n"
             "DECISION RULES:\n"
