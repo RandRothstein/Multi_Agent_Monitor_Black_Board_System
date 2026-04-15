@@ -2,10 +2,11 @@ from agents.base_agent import BaseAgent
 from sqlalchemy import text
 from model.structured_output_model import StructuredOutput
 from langchain_community.callbacks.manager import get_openai_callback
-# from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from dotenv import load_dotenv
 import os
+import time
 
 load_dotenv()
 
@@ -15,12 +16,14 @@ class AmazonVCAgent(BaseAgent):
 
         super().__init__(db,sku_id)
         self.history_context = history_context
-        self.llm = ChatOllama(
-    model="qwen2.5:1.5b",
-    temperature=0,
+        self.llm =ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            google_api_key=os.getenv('GOOGLE_API_KEY'),
+            temperature=0,
 ).with_structured_output(StructuredOutput)
 
     def run(self):
+        start = time.perf_counter()
         query = text("""
         SELECT top 1
             f.asin,
@@ -37,7 +40,8 @@ class AmazonVCAgent(BaseAgent):
         """)
 
         result = self.db.execute(query, {'sku_id': self.sku_id}).mappings().fetchone()
-
+        end = time.perf_counter()
+        print(f"AmazonVC db time: {end - start:.4f} seconds")
         if not result:
             return None
 
@@ -65,11 +69,12 @@ class AmazonVCAgent(BaseAgent):
 
         Return structured output identifying PPM status, risk level (LOW/MEDIUM/HIGH), and operational flags.
         """
-
+        start = time.perf_counter()
         with get_openai_callback() as cb:
             response = self.llm.invoke(prompt)
             print(f"---Amazon VC Agent Token Usage")
             print(f"Total Tokens: {cb.total_tokens}  |  Cost: ${cb.total_cost}")
             print(f"-------------------------------------------------")
-
+        end = time.perf_counter()
+        print(f"AmazonVC agent end time: {end - start:.4f} seconds")
         return response.model_dump()        

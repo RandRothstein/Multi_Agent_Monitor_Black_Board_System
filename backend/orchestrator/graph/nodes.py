@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from pydantic import Field , BaseModel
 from typing import Literal, Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -11,16 +12,16 @@ from orchestrator.helper import execute_agent
 from langchain_community.callbacks.manager import get_openai_callback
 
 
-model = ChatOllama(
-    model="qwen2.5:1.5b",
-    temperature=0,
-)
-
-# model = ChatGoogleGenerativeAI(
-#             model="gemini-2.5-flash",
-#             google_api_key=os.getenv('GOOGLE_API_KEY'),
-#             temperature=0,
+# model = ChatOllama(
+#     model="qwen2.5:1.5b",
+#     temperature=0,
 # )
+
+model = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            google_api_key=os.getenv('GOOGLE_API_KEY'),
+            temperature=0,
+)
 
 class RouterResponse(BaseModel):
     next_node: Literal["amazonvc_node", "summarize"]
@@ -33,6 +34,7 @@ class RouterResponse(BaseModel):
 # --- SETUP NODES ---
 def extract_sku(state):
     # Improved pattern for Amazon ASINs/SKUs (usually 10 alphanumeric)
+    start = time.perf_counter()
     sku_pattern = r'\b[A-Z0-9]{8,12}\b'
     user_query = state.get('user_query', '').upper()
     regex_match = re.search(sku_pattern, user_query)
@@ -62,14 +64,19 @@ def extract_sku(state):
 
     history = list(chat_state.history or [])
     db.close()
+    end = time.perf_counter()
+    print(f"Extract SKU execution time: {end - start:.4f} seconds")
     return {"sku": sku if sku and sku.lower() != "none" else None, "history": history}
 
 # --- SUPERVISOR (The Decision Maker) ---
 def supervisor_node(state):
+    start = time.perf_counter()
     findings = state.get("findings", [])
     sku = state.get("sku")
     user_query = state.get("user_query", "").lower()
     iterations = state.get("iterations", 0)
+    history = state.get('history', [])[-2:]
+    history_str = "\n".join([f"{h['role']}: {h['content']}" for h in history])
 
     # 1. Termination condition
     if iterations >= 3:
@@ -83,6 +90,7 @@ def supervisor_node(state):
             "You are the Lead Analyst for Amazon Vendor Central.\n"
             "CURRENT SKU: {sku}\n"
             "FINDINGS SO FAR: {findings}\n\n"
+            f"History (last 2):\n{history_str}\n"
             "CHECKS ALREADY PERFORMED: {solved_anomalies}\n\n"
             "DECISION RULES:\n"
             "1. **Direct Answer**: If the query is a greeting ('Hi', 'Hello') or a general question NOT requiring data, set next_node='summarize' and provide 'direct_response'.\n"
@@ -104,6 +112,8 @@ def supervisor_node(state):
     })
     
     print(f"--- Supervisor: {response.reasoning} | Routing to: {response.next_node} ---")
+    end = time.perf_counter()
+    print(f"Supervisor time: {end - start:.4f} seconds")
     
     updates = {
         "next_node": response.next_node, 
@@ -135,6 +145,7 @@ def summarize(state):
     Summarize findings and persist result to DB once.
     Do heavy LLM work before opening DB to avoid long-lived sessions.
     """
+    start = time.perf_counter()
     findings_list = state.get("findings", [])
     direct_answer = next((f.get("direct_answer") for f in findings_list if isinstance(f, dict) and "direct_answer" in f), None)
 
@@ -164,11 +175,13 @@ def summarize(state):
             # Save findings as well (optional)
             chat_state.findings = state.get("findings", chat_state.findings)
             db.commit()
+
     except Exception as e:
         db.rollback()
         print(f"Database error: {e}")
     finally:
         if "db" not in state:
             db.close()
-
+    end = time.perf_counter()
+    print(f"Summarization time: {end - start:.4f} seconds")
     return {"user_query": final_response}
