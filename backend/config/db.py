@@ -1,14 +1,10 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-
+from dotenv import load_dotenv
+load_dotenv()
 # MUST use the async variant of the driver (aioodbc)
 # Format: mssql+aioodbc://<user>:<pass>@<host>/<db>?driver=ODBC+Driver+18...
-DATABASE_URL = (
-    "mssql+aioodbc://rrothstein:Wednesday_2026@142.202.170.44/simpli_home_lakehouse"
-    "?driver=ODBC+Driver+18+for+SQL+Server"
-    "&TrustServerCertificate=yes"
-    "&Encrypt=yes"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_async_engine(
     DATABASE_URL,
