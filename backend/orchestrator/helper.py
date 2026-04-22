@@ -7,7 +7,7 @@ async def get_sku_action_history(db_session, sku_id):
     result = await db_session.execute(history_query, {'sku_id': sku_id})
     # Fixed scalar usage: result.scalars() gives the value directly
     history = [val for val in result.scalars() if val]
-    return " ".join(history) if history else ""
+    return " ".join(history[-5:])[:500] if history else ""
 
 AGENT_MAP = {
     "amazonvc_node": AmazonVCAgent,

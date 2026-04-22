@@ -3,7 +3,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 # Persistent memory and app to maintain state across the lifecycle of the server
 shared_memory = MemorySaver()
-shared_app = build_graph().compile(checkpointer=shared_memory)
+shared_app = build_graph().compile(checkpointer=shared_memory,debug=True)
 
 class SupervisorAgent:
     def __init__(self):

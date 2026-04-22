@@ -78,11 +78,7 @@ async def extract_sku(state):
                 history_context = await get_sku_action_history(db, sku)
 
                 await db.commit()
-            else:
-                sku=None
-        else:
-            # If SKU already existed, fetch its history conte
-            history_context = await get_sku_action_history(db, sku)
+        
     end = time.perf_counter()
     print(f"Extract SKU execution time: {end - start:.4f} seconds")
 
@@ -116,11 +112,18 @@ async def supervisor_node(state):
             f"ACTION HISTORY:\n{history_context}\n\n"
             f"History (last 2):\n{history_str}\n"
             "CHECKS ALREADY PERFORMED: {solved_anomalies}\n\n"
-            "DECISION RULES:\n"
-            "1. **Direct Answer**: If the query is a greeting ('Hi', 'Hello') or a general question NOT requiring data, set next_node='summarize' and provide 'direct_response'.\n"
-            "2. **Check Findings**: If the 'FINDINGS SO FAR' already contains the data needed to answer the user's specific request, set next_node='summarize' and provide the final answer in 'direct_response'.\n"
-            "3. **Call Worker**: ONLY if the query requires SKU-specific metrics (PPM, Traffic, Returns) that are NOT in the findings, set next_node='amazonvc_node'.\n"
-            "4. **Prioritize efficiency**: Do not call workers if you can answer using the current context."
+            "RULES:\n"
+            "1. Understand the USER QUERY intent (issue / recommendation / explanation).Answering user query is the main GOAL.\n"
+            "2. If findings already contain the answer → respond directly.\n"
+            "3. If user asks for recommendation → use 'recommendation' field in findings.\n"
+            "4. Do NOT repeat previous answers.\n"
+            "5. If data missing → call amazonvc_node.\n"
+            "6. Keep answer concise and specific.\n\n"
+
+            "OUTPUT:\n"
+            "- next_node: 'summarize' or 'amazonvc_node'\n"
+            "- direct_response: final answer if available\n"
+            "- reasoning: short justification"
         )),
         ("human", "{user_query}")
     ])
