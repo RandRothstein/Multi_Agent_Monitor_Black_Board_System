@@ -1,24 +1,24 @@
 from orchestrator.graph.workflow import build_graph
+from langgraph.checkpoint.memory import MemorySaver
 
+# Persistent memory and app to maintain state across the lifecycle of the server
+shared_memory = MemorySaver()
+shared_app = build_graph().compile(checkpointer=shared_memory)
 
 class SupervisorAgent:
-
     def __init__(self):
-        self.app = build_graph()
+        self.app = shared_app
 
-    def analyze(self, user_query: str,session_id: str):
-        
+    async def analyze(self, user_query: str, session_id: str):
         inputs = {
             "session_id": session_id,
             "user_query": user_query,
-            "sku": None,
-            "cases": [],
+            "history": [], 
             "findings": [],
-            "history": []
+            "iterations": 0
         }
         
-        # Execute the graph
-        final_state = self.app.invoke(inputs)
+        config = {"configurable": {"thread_id": session_id}}
+        final_state = await self.app.ainvoke(inputs, config=config)
         
-        # Return the summary generated in the final node
         return {"summary": final_state["user_query"]}

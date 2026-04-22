@@ -1,15 +1,21 @@
 from fastapi import FastAPI
-from api.routes.analyze import router as analyze_router
-from api.routes.action_plan import router as action_router
-from model.evidince_model import Base
-from config.db import engine
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from config.db import engine
+from model.evidince_model import Base
+from api.routes.analyze import router as analyze_router
 
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize DB tables on startup
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
 
-app = FastAPI(title="Multi-Agent System")
+app = FastAPI(title="SOL Multi-Agent System", lifespan=lifespan)
 
-origins =[
+# CORS Configuration
+origins = [
     "http://localhost:3000",
     "http://localhost:5173"
 ]
@@ -21,5 +27,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+# Include Routers
 app.include_router(analyze_router)
-app.include_router(action_router)
+
+@app.get("/")
+async def health_check():
+    return {"status": "active", "system": "Multi-Agent Analyst"}

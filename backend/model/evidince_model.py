@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime,Text,JSON
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-
+from sqlalchemy.dialects.mssql import NVARCHAR
 # 1. This creates the registry
 Base = declarative_base()
 
@@ -49,8 +49,10 @@ class ActionPlan(Base):
 class ChatState(Base):
     __tablename__ = "chat_state"
 
-    session_id = Column(String(100),primary_key=True)
-    current_sku = Column(String(50),nullable=True)
+    # Indexing is vital for scaling. A session_id lookup must be O(1).
+    session_id = Column(String(100), primary_key=True, index=True)
+    current_sku = Column(String(50), nullable=True, index=True)
 
-    findings = Column(JSON,nullable=True)
-    history = Column(JSON,default=[])
+    # Use Text(None) or NVARCHAR(MAX) for JSON in SQL Server to avoid truncation
+    findings = Column(JSON, nullable=True)
+    history = Column(JSON, default=[])

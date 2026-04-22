@@ -9,6 +9,6 @@ class QueryRequest(BaseModel):
     session_id: str
 
 @router.post("/analyze")
-def analyze(request: QueryRequest):
+async def analyze(request: QueryRequest):
     supervisor = SupervisorAgent()
-    return supervisor.analyze(request.query,request.session_id)
+    return await supervisor.analyze(request.query,request.session_id)
