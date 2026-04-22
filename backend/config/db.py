@@ -4,7 +4,10 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 # MUST use the async variant of the driver (aioodbc)
 # Format: mssql+aioodbc://<user>:<pass>@<host>/<db>?driver=ODBC+Driver+18...
 DATABASE_URL = (
-cridentials
+    "mssql+aioodbc://rrothstein:Wednesday_2026@142.202.170.44/simpli_home_lakehouse"
+    "?driver=ODBC+Driver+18+for+SQL+Server"
+    "&TrustServerCertificate=yes"
+    "&Encrypt=yes"
 )
 
 engine = create_async_engine(

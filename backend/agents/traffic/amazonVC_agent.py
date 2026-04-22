@@ -14,10 +14,9 @@ class AmazonVCAgent(BaseAgent):
     def __init__(self,db,sku_id, history_context=""):
         super().__init__(db,sku_id)
         self.history_context = history_context
-        self.llm =ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            google_api_key=os.getenv('GOOGLE_API_KEY'),
-            temperature=0,
+        self.llm =ChatOllama(
+    model="qwen2.5:1.5b",
+    temperature=0,
 ).with_structured_output(StructuredOutput)
 
     async def run(self):

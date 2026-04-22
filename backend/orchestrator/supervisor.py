@@ -21,4 +21,7 @@ class SupervisorAgent:
         config = {"configurable": {"thread_id": session_id}}
         final_state = await self.app.ainvoke(inputs, config=config)
         
-        return {"summary": final_state["user_query"]}
+        return {
+            "summary": final_state.get("final_report", "No report generated."),
+            "sku": final_state.get("sku")
+        }

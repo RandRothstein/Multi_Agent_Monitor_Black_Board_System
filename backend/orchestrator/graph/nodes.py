@@ -11,21 +11,16 @@ from orchestrator.helper import execute_agent, get_sku_action_history
 from langchain_community.callbacks.manager import get_openai_callback
 from sqlalchemy import select
 
-
-
-# model = ChatOllama(
-
-#     model="qwen2.5:1.5b",
-
-#     temperature=0,
-
-# )
-
-model = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            google_api_key=os.getenv('GOOGLE_API_KEY'),
-            temperature=0,
+model = ChatOllama(
+    model="qwen2.5:1.5b",
+    temperature=0,
 )
+
+# model = ChatGoogleGenerativeAI(
+#             model="gemini-2.5-flash",
+#             google_api_key=os.getenv('GOOGLE_API_KEY'),
+#             temperature=0,
+# )
 
 class RouterResponse(BaseModel):
     next_node: Literal["amazonvc_node", "summarize"]
@@ -35,160 +30,138 @@ class RouterResponse(BaseModel):
         description="Provide the final answer here if you have enough info or if it's a general query."
     )
 # --- SETUP NODES ---
-
 async def extract_sku(state):
-
+    """Detects SKU and pulls historical context. Caches result to avoid DB thrashing."""
     start = time.perf_counter()
     sku_pattern = r'\b[A-Z0-9]{8,12}\b'
     user_query = state.get('user_query', '').upper()
-    regex_match = re.search(sku_pattern, user_query)
     session_id = state["session_id"]
-    current_state_sku = state.get("sku",'')
-    history_context = state.get("history_context",'')
+    
+    # 1. Return early if already in state
+    if state.get("sku") and state.get("history_context"):
+        return {"sku": state["sku"]}
 
-    if current_state_sku and history_context:
-        end = time.perf_counter()
-        print(f"Extract SKU (cached) execution time: {end - start:.4f} seconds")
-        return {"sku": current_state_sku, "history_context": history_context}  
+    # 2. Regex Extraction
+    regex_match = re.search(sku_pattern, user_query)
+    sku = regex_match.group(0) if regex_match else None
 
-    sku = None
-    async with AsyncSessionLocal() as db:
-        # 1. Fetch the state
-        result = await db.execute(select(ChatState).filter_by(session_id=session_id))
-        chat_state = result.scalars().first()
-        # 2. Create if it doesn't exist
+    # 3. LLM Fallback
+    if not sku:
+        res = await model.ainvoke(f"Extract ONLY the Amazon SKU/ASIN from: {user_query}. Return 'None' if missing.")
+        val = res.content.strip().replace("`", "")
+        sku = val if val.lower() != "none" else None
 
-        if not chat_state:
-            chat_state = ChatState(session_id=session_id, history=[], findings=None)
-            db.add(chat_state)
-            await db.commit()
-            await db.refresh(chat_state)
-        sku = chat_state.current_sku
-        # 3. Logic to update SKU if missing (STILL INSIDE SESSION)
-
-        if not sku:
-            if regex_match:
-                sku = regex_match.group(0)
+    history_context = ""
+    if sku:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(ChatState).filter_by(session_id=session_id))
+            chat_state = result.scalars().first()
+            if not chat_state:
+                chat_state = ChatState(session_id=session_id, history=[], current_sku=sku)
+                db.add(chat_state)
             else:
-                res = await model.ainvoke(f"Extract ONLY the SKU from this text. If none, return 'None'. Text: {user_query}")
-                sku = res.content.strip().replace("`", "")
-            if sku and sku.lower() != "none":
                 chat_state.current_sku = sku
-                # Fetch context and commit while session is open
-                history_context = await get_sku_action_history(db, sku)
+            
+            history_context = await get_sku_action_history(db, sku)
+            await db.commit()
 
-                await db.commit()
-        
-    end = time.perf_counter()
-    print(f"Extract SKU execution time: {end - start:.4f} seconds")
-
-    return {
-        "sku": sku if sku and sku.lower() != "none" else None,
-        "history_context": history_context
-    }
-# --- SUPERVISOR (The Decision Maker) ---
+    print(f"Extract SKU time: {time.perf_counter() - start:.4f}s")
+    return {"sku": sku, "history_context": history_context}
 
 async def supervisor_node(state):
+    """The Brain: Prevents redundant loops by checking the 'findings' list."""
     start = time.perf_counter()
     findings = state.get("findings", [])
     sku = state.get("sku")
-    user_query = state.get("user_query", "").lower()
+    user_query = state.get("user_query", "")
     iterations = state.get("iterations", 0)
-    history = state.get('history', [])[-2:]
-    history_str = "\n".join([f"{h['role']}: {h['content']}" for h in history])
     history_context = state.get("history_context", "")
 
-    # 1. Termination condition
-    if iterations >= 3:
+    # --- THE CIRCUIT BREAKER ---
+    # Check if we already have actual data for this SKU in findings.
+    # We look for 'finding_summary' or 'signals' which come from the Worker.
+    has_actual_data = any("finding_summary" in f for f in findings if isinstance(f, dict))
+
+    if has_actual_data or iterations >= 3:
+        print("--- Supervisor: Data already found or max iterations reached. Routing to Summarize. ---")
         return {"next_node": "summarize", "iterations": iterations + 1}
-    # 2. Extract types of data already fetched to help the LLM decide
-    solved_anomalies = [f.get('anomaly_type') for f in findings if isinstance(f, dict)]
+
     prompt = ChatPromptTemplate.from_messages([
-
         ("system", (
-            "You are the Lead Analyst for Amazon Vendor Central.\n"
-            "CURRENT SKU: {sku}\n"
-            "FINDINGS SO FAR: {findings}\n\n"
-            f"ACTION HISTORY:\n{history_context}\n\n"
-            f"History (last 2):\n{history_str}\n"
-            "CHECKS ALREADY PERFORMED: {solved_anomalies}\n\n"
+            "You are the Lead Amazon Vendor Central Analyst.\n"
+            "SKU: {sku}\n"
+            "CURRENT DATA: {findings}\n"
+            "HISTORICAL CONTEXT: {history_context}\n\n"
+            "GOAL: Answer the user query using data.\n"
             "RULES:\n"
-            "1. Understand the USER QUERY intent (issue / recommendation / explanation).Answering user query is the main GOAL.\n"
-            "2. If findings already contain the answer → respond directly.\n"
-            "3. If user asks for recommendation → use 'recommendation' field in findings.\n"
-            "4. Do NOT repeat previous answers.\n"
-            "5. If data missing → call amazonvc_node.\n"
-            "6. Keep answer concise and specific.\n\n"
-
-            "OUTPUT:\n"
-            "- next_node: 'summarize' or 'amazonvc_node'\n"
-            "- direct_response: final answer if available\n"
-            "- reasoning: short justification"
+            "1. If 'CURRENT DATA' is empty or missing metrics, route to 'amazonvc_node'.\n"
+            "2. If 'CURRENT DATA' already contains a 'finding_summary', route to 'summarize'.\n"
+            "3. Use 'direct_response' ONLY for status updates like 'I am checking the metrics for you.'\n"
+            "4. Never route to 'amazonvc_node' more than once for the same issue."
         )),
         ("human", "{user_query}")
     ])
-    # Use the model with structured output
+
     chain = prompt | model.with_structured_output(RouterResponse)
     response = await chain.ainvoke({
         "sku": sku,
-        "solved_anomalies": solved_anomalies,
         "findings": findings,
         "user_query": user_query,
-        "history_str": history_str
+        "history_context": history_context
     })
-    print(f"--- Supervisor: {response.reasoning} | Routing to: {response.next_node} ---")
-    end = time.perf_counter()
-    print(f"Supervisor time: {end - start:.4f} seconds")
-    updates = {
-        "next_node": response.next_node,
-        "iterations": iterations + 1
-    }
-    # If the supervisor found the answer, inject it into findings for the summarizer
+
+    updates = {"next_node": response.next_node, "iterations": iterations + 1}
     if response.direct_response:
         updates["findings"] = [{"direct_answer": response.direct_response}]
+    
+    print(f"Supervisor time: {time.perf_counter() - start:.4f}s | Routing: {response.next_node}")
     return updates
-# --- WORKER NODES (Sub-Agents) ---
 
 async def amazonvc_node(state):
+    """Worker: Fetches data. Ensures we return a list to satisfy state reducers."""
     sku = state["sku"]
-    # The helper now just runs the one agent this node is responsible f
     async with AsyncSessionLocal() as db:
         finding = await execute_agent(db, sku, "amazonvc_node")
-
     return {"findings": [finding] if finding else []}
-# --- SUMMARIZER ---
 
 async def summarize(state):
-
-    """
-    Summarize findings and persist result to DB once.
-    Do heavy LLM work before opening DB to avoid long-lived sessions.
-    """
+    """Final Output: Synthesizes findings and cleans up history."""
     start = time.perf_counter()
     findings_list = state.get("findings", [])
-    direct_answer = next((f.get("direct_answer") for f in findings_list if isinstance(f, dict) and "direct_answer" in f), None)
+    user_query = state.get("user_query", "")
 
-    if direct_answer:
-        final_response = direct_answer
-    else:
-        findings_str = "\n".join([str(f) for f in findings_list])
-        # Keep prompt short
+    # 1. Prioritization: Filter for the actual data from the worker
+    real_data = [f for f in findings_list if isinstance(f, dict) and "finding_summary" in f]
+    status_updates = [f.get("direct_answer") for f in findings_list if "direct_answer" in f]
+
+    if real_data:
+        # Use the latest actual data found
+        latest_finding = real_data[-1].get("finding_summary", "")
+        recommendation = real_data[-1].get("recommendation", "")
+        
         prompt = (
-            f"History (last 2): {state.get('history', [])[-2:]}\n"
-            f"Query: {state.get('user_query','')}\n"
-            f"Findings: {findings_str}\n\nSummarize the results concisely."
-            f"Perform the calculation to answer the user. Based on the requirements"
+            f"User Query: {user_query}\n"
+            f"Technical Finding: {latest_finding}\n"
+            f"Recommendation: {recommendation}\n\n"
+            "Synthesize response to answer user query"
         )
         res = await model.ainvoke(prompt)
         final_response = res.content
-    new_messages = [
-            {"role": "user", "content": state.get("user_query")},
-            {"role": "assistant", "content": final_response}
-        ]
-    end = time.perf_counter()
-    print(f"Summarization time: {end - start:.4f} seconds")
-    return {
-            "user_query": final_response,
-            "history": new_messages
-        }
+    elif status_updates:
+        # If no worker data exists, use the latest status update from the supervisor
+        final_response = status_updates[-1]
+    else:
+        final_response = "I'm sorry, I couldn't retrieve the data for that SKU at this moment."
 
+    # 2. Update History: Don't overwrite 'user_query' in the state!
+    # Instead, we just prepare the history for the next turn.
+    new_messages = [
+        {"role": "user", "content": user_query},
+        {"role": "assistant", "content": final_response}
+    ]
+
+    print(f"Summarization time: {time.perf_counter() - start:.4f}s")
+    return {
+        "final_report": final_response, # Use this key for your API response
+        "history": new_messages
+    }

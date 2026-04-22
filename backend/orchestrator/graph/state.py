@@ -15,5 +15,6 @@ class GraphState(TypedDict):
     next_node: str
     iterations: int
     history_context:str
+    final_report: str
 
 
