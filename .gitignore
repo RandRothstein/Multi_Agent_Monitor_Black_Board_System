@@ -4,3 +4,4 @@ __pycache__
 .env
 image.png
 list.txt
+config/db.py
