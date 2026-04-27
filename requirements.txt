@@ -1,3 +1,10 @@
 sqlalchemy
-pyodbc
+aioodbc
 pydantic
+langchain
+dotenv
+fastapi
+langchain_community
+langchain_google_genai
+uvicorn
+langchain_ollama
