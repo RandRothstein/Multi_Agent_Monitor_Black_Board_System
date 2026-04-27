@@ -1,4 +1,3 @@
-![alt text](image.png)
 # 🧠 Multi-Agent Monitor System (LangGraph-Based)
 
 ## 📌 Overview
